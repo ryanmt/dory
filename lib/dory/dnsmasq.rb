@@ -15,11 +15,16 @@ module Dory
 
       # we don't want to hassle the user with checking the port unless necessary
       if @@first_attempt_failed
+        handle_systemd_services = self.has_systemd? && self.has_services_that_block_dnsmasq?
+        self.down_systemd_services if handle_systemd_services
+
         puts "[DEBUG] First attempt failed.  Checking port #{self.port}" if Dory::Config.debug?
         listener_list = self.check_port(self.port)
         unless listener_list.empty?
           return self.offer_to_kill(listener_list)
         end
+
+        self.up_systemd_services if handle_systemd_services
         return false
       else
         puts "[DEBUG] Skipping preconditions on first run" if Dory::Config.debug?
@@ -44,7 +49,7 @@ module Dory
     end
 
     def self.ip_from_dinghy?
-      Dory::Dinghy.match?(self.address(self.old_address)) || 
+      Dory::Dinghy.match?(self.address(self.old_address)) ||
         self.domains.any?{ |domain| Dory::Dinghy.match?(self.address(domain[:address])) }
     end
 
@@ -134,6 +139,68 @@ module Dory
         puts "OK, not killing PID #{pidstr}.  Please kill manually and try starting dory again.".red
         return false
       end
+    end
+
+    def self.has_systemd?
+      Sh.run_command('which systemctl').success?
+    end
+
+    def self.systemd_service_installed?(service)
+      !(Sh.run_command("systemctl status #{service} | head -1").stdout =~ /unit.*not.*found/i)
+    end
+
+    def self.services_that_block_dnsmasq
+      %w[
+        NetworkManager.service
+        systemd-resolved.service
+      ]
+    end
+
+    def self.has_services_that_block_dnsmasq?
+      !self.enabled_services_that_block_dnsmasq.empty?
+    end
+
+    def self.enabled_services_that_block_dnsmasq
+      self.services_that_block_dnsmasq.select do |service|
+        self.systemd_service_installed?(service)
+      end
+    end
+
+    def self.down_systemd_services
+      services = self.enabled_services_that_block_dnsmasq
+      puts "You have some systemd services running that will race against us \n" \
+           "to bind to port 53 (and usually they win): #{services.join(', ')}".yellow
+      puts "If we don't stop these services temporarily while putting up the \n" \
+           "dnsmasq container, starting it will likely fail.".yellow
+      puts "Would you like me to put them down while we start dns \n" \
+           "(I'll put them back up when finished)? (Y/N): ".green
+      if STDIN.gets.chomp =~ /y/i
+        if services.all? { |service|
+          self.set_systemd_service(service: service, up: false)
+        }
+          puts "Putting down services succeeded".green
+        else
+          puts "One or more services failed to go down".red
+        end
+      else
+        puts 'OK, not putting down the services'.yellow
+      end
+    end
+
+    def self.up_systemd_services
+      services = self.enabled_services_that_block_dnsmasq
+      if services.reverse.all? { |service|
+        self.set_systemd_service(service: service, up: true)
+      }
+        puts "#{services.join(', ')} were successfully restarted".green
+      else
+        puts "#{services.join(', ')} failed to restart".red
+      end
+    end
+
+    def self.set_systemd_service(service:, up:)
+      action = up ? 'start' : 'stop'
+      Sh.run_command("sudo systemctl #{action} #{service}").success?
     end
   end
 end
