@@ -35,7 +35,7 @@ module Dory
         if docker_installed?
           self.delete_container_if_exists
           self.run_preconditions
-          self.execute_run_command(handle_error)
+          self.execute_run_command(handle_error: handle_error)
           self.run_postconditions
         else
           err_msg = "Docker does not appear to be installed /o\\\n" \
