@@ -90,7 +90,7 @@ module Dory
       end
     end
 
-    def self.execute_run_command
+    def execute_run_command
       begin
         if Dory::Config.debug?
           puts "[DEBUG] '#{self.container_name}' does not exist.  Creating/starting " \
