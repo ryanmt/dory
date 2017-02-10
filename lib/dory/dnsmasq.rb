@@ -178,17 +178,20 @@ module Dory
       puts "[DEBUG] Putting systemd services down" if Dory::Config.debug?
 
       services = self.enabled_services_that_block_dnsmasq
-      puts "You have some systemd services running that will race against us \n" \
-          "to bind to port 53 (and usually they win):".yellow
-      puts "\n     #{services.join(', ')}\n".yellow
-      puts "If we don't stop these services temporarily while putting up the \n" \
-           "dnsmasq container, starting it will likely fail.".yellow
-      print "Would you like me to put them down while we start dns \n" \
-           "(I'll put them back up when finished)? (Y/N): ".green
-
-      conf = answer_from_settings
-      conf = STDIN.gets.chomp unless conf
-      if conf =~ /y/i
+      conf = if ask_about_killing?
+               puts "You have some systemd services running that will race against us \n" \
+                    "to bind to port 53 (and usually they win):".yellow
+               puts "\n     #{services.join(', ')}\n".yellow
+               puts "If we don't stop these services temporarily while putting up the \n" \
+                    "dnsmasq container, starting it will likely fail.".yellow
+               print "Would you like me to put them down while we start dns \n" \
+                     "(I'll put them back up when finished)? (Y/N): ".green
+               STDIN.gets.chomp
+             else
+               answer_from_settings
+             end
+      @@handle_systemd_services = conf =~ /y/i
+      if @@handle_systemd_services
         if services.all? { |service|
           self.set_systemd_service(service: service, up: false)
         }
@@ -202,14 +205,18 @@ module Dory
     end
 
     def self.up_systemd_services
-      puts "[DEBUG] Putting systemd services back up" if Dory::Config.debug?
-      services = self.enabled_services_that_block_dnsmasq
-      if services.reverse.all? { |service|
-        self.set_systemd_service(service: service, up: true)
-      }
-        puts "#{services.join(', ')} were successfully restarted".green
+      if @@handle_systemd_services
+        puts "[DEBUG] Putting systemd services back up" if Dory::Config.debug?
+        services = self.enabled_services_that_block_dnsmasq
+        if services.reverse.all? { |service|
+          self.set_systemd_service(service: service, up: true)
+        }
+          puts "#{services.join(', ')} were successfully restarted".green
+        else
+          puts "#{services.join(', ')} failed to restart".red
+        end
       else
-        puts "#{services.join(', ')} failed to restart".red
+        puts "[DEBUG] Not putting systemd services back up cause skipped " if Dory::Config.debug?
       end
     end
 
