@@ -140,8 +140,6 @@ RSpec.describe Dory::Dnsmasq do
     allow(Dory::Config).to receive(:filename) { "/tmp/doesnotexist.lies" }
     allow(Dory::Config).to receive(:default_yaml) { dory_config_dinghy }
     allow(Dory::Bash).to receive(:run_command) { OpenStruct.new(stdout: "something totally wrong\n") }
-    #require 'byebug'
-    #debugger
     expect{ Dory::Dnsmasq.address('dinghy') }.to raise_error(Dory::Dinghy::DinghyError)
     expect{ Dory::Dnsmasq.domain_addr_arg_string }.to raise_error(Dory::Dinghy::DinghyError)
   end
