@@ -16,6 +16,11 @@ module Dory
       return true
     end
 
+    def run_postconditions
+      # Override if postconditions are needed
+      return true
+    end
+
     def handle_error(command_output)
       # Override to provide error handling
       return false
@@ -28,26 +33,10 @@ module Dory
         end
       else
         if docker_installed?
+          self.delete_container_if_exists
           self.run_preconditions
-          if self.container_exists?
-            puts "[DEBUG] Container '#{self.container_name}' exists.  Deleting" if Dory::Config.debug?
-            self.delete
-          end
-          begin
-            if Dory::Config.debug?
-              puts "[DEBUG] '#{self.container_name}' does not exist.  Creating/starting " \
-                   "'#{self.container_name}' with '#{self.run_command}'"
-            end
-            status = Sh.run_command(self.run_command)
-            unless status.success?
-              if !handle_error || !self.handle_error(status)
-                puts "Failed to start docker container '#{self.container_name}' " \
-                     ".  Command '#{self.run_command}' failed".red
-              end
-            end
-          rescue Dory::Dinghy::DinghyError => e
-            puts e.message.red
-          end
+          self.execute_run_command
+          self.run_postconditions
         else
           err_msg = "Docker does not appear to be installed /o\\\n" \
             "Docker is required for DNS and Nginx proxy.  These can be " \
@@ -92,6 +81,32 @@ module Dory
 
     def start_cmd
       "docker start #{Shellwords.escape(self.container_name)}"
+    end
+
+    def delete_container_if_exists
+      if self.container_exists?
+        puts "[DEBUG] Container '#{self.container_name}' exists.  Deleting" if Dory::Config.debug?
+        self.delete
+      end
+    end
+
+    def self.execute_run_command
+      begin
+        if Dory::Config.debug?
+          puts "[DEBUG] '#{self.container_name}' does not exist.  Creating/starting " \
+               "'#{self.container_name}' with '#{self.run_command}'"
+        end
+        status = Sh.run_command(self.run_command)
+        unless status.success?
+          if !handle_error || !self.handle_error(status)
+            puts "Failed to start docker container '#{self.container_name}' " \
+                 ".  Command '#{self.run_command}' failed".red
+          end
+        end
+      rescue Dory::Dinghy::DinghyError => e
+        puts e.message.red
+      end
+      status
     end
   end
 end

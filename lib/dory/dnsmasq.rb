@@ -4,7 +4,11 @@ module Dory
   class Dnsmasq
     extend Dory::DockerService
 
+    #
+    # I really hate these globals.  It would be great to refactor these out
+    #
     @@first_attempt_failed = false
+    @@handle_systemd_services = false
 
     def self.dnsmasq_image_name
       'freedomben/dory-dnsmasq:1.1.0'
@@ -15,8 +19,8 @@ module Dory
 
       # we don't want to hassle the user with checking the port unless necessary
       if @@first_attempt_failed
-        handle_systemd_services = self.has_systemd? && self.has_services_that_block_dnsmasq?
-        self.down_systemd_services if handle_systemd_services
+        @@handle_systemd_services = self.has_systemd? && self.has_services_that_block_dnsmasq?
+        self.down_systemd_services if @@handle_systemd_services
 
         puts "[DEBUG] First attempt failed.  Checking port #{self.port}" if Dory::Config.debug?
         listener_list = self.check_port(self.port)
@@ -24,12 +28,16 @@ module Dory
           return self.offer_to_kill(listener_list)
         end
 
-        self.up_systemd_services if handle_systemd_services
         return false
       else
         puts "[DEBUG] Skipping preconditions on first run" if Dory::Config.debug?
         return true
       end
+    end
+
+    def self.run_postconditions
+      puts "[DEBUG] dnsmasq service running postconditions" if Dory::Config.debug?
+      self.up_systemd_services if @@handle_systemd_services
     end
 
     def self.handle_error(command_output)
