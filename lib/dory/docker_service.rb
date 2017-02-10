@@ -45,7 +45,7 @@ module Dory
                      ".  Command '#{self.run_command}' failed".red
               end
             end
-          rescue DinghyError => e
+          rescue Dory::Dinghy::DinghyError => e
             puts e.message.red
           end
         else

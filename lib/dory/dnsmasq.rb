@@ -167,12 +167,15 @@ module Dory
     end
 
     def self.down_systemd_services
+      puts "[DEBUG] Putting systemd services down" if Dory::Config.debug?
+
       services = self.enabled_services_that_block_dnsmasq
       puts "You have some systemd services running that will race against us \n" \
-           "to bind to port 53 (and usually they win): #{services.join(', ')}".yellow
+          "to bind to port 53 (and usually they win):".yellow
+      puts "\n     #{services.join(', ')}\n".yellow
       puts "If we don't stop these services temporarily while putting up the \n" \
            "dnsmasq container, starting it will likely fail.".yellow
-      puts "Would you like me to put them down while we start dns \n" \
+      print "Would you like me to put them down while we start dns \n" \
            "(I'll put them back up when finished)? (Y/N): ".green
 
       conf = answer_from_settings
@@ -191,6 +194,7 @@ module Dory
     end
 
     def self.up_systemd_services
+      puts "[DEBUG] Putting systemd services back up" if Dory::Config.debug?
       services = self.enabled_services_that_block_dnsmasq
       if services.reverse.all? { |service|
         self.set_systemd_service(service: service, up: true)
@@ -206,7 +210,7 @@ module Dory
       Sh.run_command("sudo systemctl #{action} #{service}").success?
     end
 
-    def answer_from_settings
+    def self.answer_from_settings
       Dory::Config.settings[:dory][:dnsmasq][:kill_others_no_prompt] ? 'Y' : nil
     end
   end
