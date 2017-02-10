@@ -218,8 +218,25 @@ module Dory
       Sh.run_command("sudo systemctl #{action} #{service}").success?
     end
 
+    def self.ask_about_killing?
+      !self.answer_from_settings
+    end
+
+    def self.kill_others
+      Dory::Config.settings[:dory][:dnsmasq][:kill_others]
+    end
+
     def self.answer_from_settings
-      Dory::Config.settings[:dory][:dnsmasq][:kill_others_no_prompt] ? 'Y' : nil
+      # This `== true` is important because kill_others could be
+      # 'no' which would be a truthy value despite the fact that it
+      # should be falsey
+      if self.kill_others == true || self.kill_others =~ /yes/i
+        'Y'
+      elsif self.kill_others == false || self.kill_others =~ /no/i
+        'N'
+      else
+        nil
+      end
     end
   end
 end

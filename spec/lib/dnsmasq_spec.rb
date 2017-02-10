@@ -224,4 +224,47 @@ RSpec.describe Dory::Dnsmasq do
       end
     end
   end
+
+  context 'kill others setting' do
+    let(:stub_settings) do
+      ->(new_settings) do
+        allow(Dory::Config).to receive(:settings) { new_settings }
+      end
+    end
+
+    it '#kill_others pulls the settings out' do
+      stub_settings.call({ dory: { dnsmasq: { kill_others: 'yo' }}})
+      expect(Dory::Dnsmasq.kill_others).to eq('yo')
+    end
+
+    {
+      true => 'Y',
+      'yes' => 'Y',
+      false => 'N',
+      'no' => 'N',
+      'ask' => nil,
+      'something-wrong' => nil
+    }.each do |value, expected|
+      it "#answer_from_settings handles #{value}" do
+        stub_settings.call({ dory: { dnsmasq: { kill_others: value }}})
+        expect(Dory::Dnsmasq.answer_from_settings).to eq(expected)
+      end
+
+      it "#ask_about_killing handles #{value}" do
+        stub_settings.call({ dory: { dnsmasq: { kill_others: value }}})
+        expect(Dory::Dnsmasq.answer_from_settings).to eq(expected == nil)
+      end
+    end
+  end
+
+  context 'smoke test' do
+    it 'runs the command (smoke test)' do
+      got_called = false
+      allow(Dory::Dnsmasq).to receive(:has_systemd?) { false }
+      allow(Dory::Bash).to receive(:run_command) { got_called = true }
+      expect {
+        Dory::Dnsmasq.execute_run_command(handle_error: true)
+      }.to change{ got_called }.from(false).to(true)
+    end
+  end
 end

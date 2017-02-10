@@ -125,12 +125,12 @@ RSpec.describe Dory::Config do
     expect(new_settings[:dory][:dnsmasq][:domains][0][:address]).to eq('192.168.11.1')
   end
 
-  it "adds the kill setting defaulted to false" do
+  it "adds the kill setting defaulted to 'ask'" do
     Dory::Config.write_settings(upgradeable_config, filename, is_yaml: true)
     Dory::Config.upgrade_settings_file(filename)
     new_settings = Dory::Config.settings
-    expect(new_settings[:dory][:dnsmasq]).to have_key(:kill_others_no_prompt)
-    expect(new_settings[:dory][:dnsmasq][:kill_others_no_prompt]).to eq(false)
+    expect(new_settings[:dory][:dnsmasq]).to have_key(:kill_others)
+    expect(new_settings[:dory][:dnsmasq][:kill_others]).to eq('ask')
   end
 
   it "uses hashes with indifferent access" do

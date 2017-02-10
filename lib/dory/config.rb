@@ -27,7 +27,7 @@ module Dory
                 address: 127.0.0.1
             container_name: dory_dnsmasq
             port: 53  # port to listen for dns requests on.  must be 53 on linux. can be anything that's open on macos
-            kill_others_no_prompt: false  # go ahead and kill processes that are bound to the port we need
+            kill_others: ask  # go ahead and kill processes that are bound to the port we need.  Possible values:  ask (kill without asking), yes|true (kill without asking), no|false (don't even ask)
           nginx_proxy:
             enabled: true
             container_name: dory_dinghy_http_proxy
@@ -90,7 +90,7 @@ module Dory
       end
 
       # Add the option to skip prompts
-      newsettings[:dory][:dnsmasq][:kill_others_no_prompt] = false
+      newsettings[:dory][:dnsmasq][:kill_others] = 'ask'
 
       newsettings
     end

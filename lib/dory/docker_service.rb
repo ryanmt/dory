@@ -35,7 +35,7 @@ module Dory
         if docker_installed?
           self.delete_container_if_exists
           self.run_preconditions
-          self.execute_run_command
+          self.execute_run_command(handle_error)
           self.run_postconditions
         else
           err_msg = "Docker does not appear to be installed /o\\\n" \
@@ -90,7 +90,7 @@ module Dory
       end
     end
 
-    def execute_run_command
+    def execute_run_command(handle_error:)
       begin
         if Dory::Config.debug?
           puts "[DEBUG] '#{self.container_name}' does not exist.  Creating/starting " \
