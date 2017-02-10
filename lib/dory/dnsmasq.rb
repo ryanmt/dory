@@ -130,7 +130,7 @@ module Dory
       pids = listener_list.uniq(&:pid).map(&:pid)
       pidstr = pids.join(' and ')
       print "This interferes with Dory's dnsmasq container.  Would you like me to kill PID #{pidstr}? (Y/N): "
-      conf = answer ? answer : ENV['DORY_KILL_DNSMASQ']
+      conf = answer ? answer : answer_from_settings
       conf = STDIN.gets.chomp unless conf
       if conf =~ /y/i
         puts "Requesting sudo to kill PID #{pidstr}"
@@ -174,7 +174,10 @@ module Dory
            "dnsmasq container, starting it will likely fail.".yellow
       puts "Would you like me to put them down while we start dns \n" \
            "(I'll put them back up when finished)? (Y/N): ".green
-      if STDIN.gets.chomp =~ /y/i
+
+      conf = answer_from_settings
+      conf = STDIN.gets.chomp unless conf
+      if conf =~ /y/i
         if services.all? { |service|
           self.set_systemd_service(service: service, up: false)
         }
@@ -201,6 +204,10 @@ module Dory
     def self.set_systemd_service(service:, up:)
       action = up ? 'start' : 'stop'
       Sh.run_command("sudo systemctl #{action} #{service}").success?
+    end
+
+    def answer_from_settings
+      Dory::Config.settings[:dory][:dnsmasq][:kill_others_no_prompt] ? 'Y' : nil
     end
   end
 end
