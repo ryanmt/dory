@@ -10,6 +10,7 @@ RSpec.describe Dory::Dnsmasq do
             - :domain: docker_second
               :address: 192.168.11.2
           :container_name: dory_dnsmasq_test_name
+          :kill_others: false
     ).split("\n").map{|s| s.sub(' ' * 6, '')}.join("\n")
   end
 
@@ -261,7 +262,13 @@ RSpec.describe Dory::Dnsmasq do
     it 'runs the command (smoke test)' do
       got_called = false
       allow(Dory::Dnsmasq).to receive(:has_systemd?) { false }
-      allow(Dory::Bash).to receive(:run_command) { got_called = true }
+      allow(Dory::Dnsmasq).to receive(:delete_container_if_exists) { true }
+      allow(Dory::Dnsmasq).to receive(:run_preconditions) { true }
+      allow(Dory::Dnsmasq).to receive(:run_postconditions) { true }
+      allow(Dory::Sh).to receive(:run_command) do
+        got_called = true
+        OpenStruct.new(success?: true)
+      end
       expect {
         Dory::Dnsmasq.execute_run_command(handle_error: true)
       }.to change{ got_called }.from(false).to(true)
