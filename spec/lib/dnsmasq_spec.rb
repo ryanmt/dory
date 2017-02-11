@@ -252,7 +252,7 @@ RSpec.describe Dory::Dnsmasq do
 
       it "#ask_about_killing handles #{value}" do
         stub_settings.call({ dory: { dnsmasq: { kill_others: value }}})
-        expect(Dory::Dnsmasq.answer_from_settings).to eq(expected == nil)
+        expect(Dory::Dnsmasq.ask_about_killing?).to eq(expected == nil)
       end
     end
   end
