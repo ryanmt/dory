@@ -133,15 +133,15 @@ module Dory
 
     def self.offer_to_kill(listener_list, answer: nil)
       listener_list.each do |process|
-        puts "Process '#{process.command}' with PID '#{process.pid}' is listening on #{process.node} port #{self.port}."
+        puts "Process '#{process.command}' with PID '#{process.pid}' is listening on #{process.node} port #{self.port}.".yellow
       end
       pids = listener_list.uniq(&:pid).map(&:pid)
       pidstr = pids.join(' and ')
-      print "This interferes with Dory's dnsmasq container.  Would you like me to kill PID #{pidstr}? (Y/N): "
+      print "This interferes with Dory's dnsmasq container.  Would you like me to kill PID #{pidstr}? (Y/N): ".yellow
       conf = answer ? answer : answer_from_settings
       conf = STDIN.gets.chomp unless conf
       if conf =~ /y/i
-        puts "Requesting sudo to kill PID #{pidstr}"
+        puts "Requesting sudo to kill PID #{pidstr}".green
         return Sh.run_command("sudo kill #{pids.join(' ')}").success?
       else
         puts "OK, not killing PID #{pidstr}.  Please kill manually and try starting dory again.".red
@@ -185,7 +185,7 @@ module Dory
                puts "If we don't stop these services temporarily while putting up the \n" \
                     "dnsmasq container, starting it will likely fail.".yellow
                print "Would you like me to put them down while we start dns \n" \
-                     "(I'll put them back up when finished)? (Y/N): ".green
+                     "(I'll put them back up when finished)? (Y/N): ".yellow
                STDIN.gets.chomp
              else
                answer_from_settings
@@ -222,6 +222,7 @@ module Dory
 
     def self.set_systemd_service(service:, up:)
       action = up ? 'start' : 'stop'
+      puts "Requesting sudo to #{action} #{service}".green
       Sh.run_command("sudo systemctl #{action} #{service}").success?
     end
 
